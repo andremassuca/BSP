@@ -1,0 +1,68 @@
+# Build artefacts
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.spec
+
+# PyInstaller
+*.pkg
+*.toc
+
+# Temporários Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Ícone macOS - BSP.icns e gerado pelo branding/_apply.py e e arte final do v1.0
+# (deve ser commitado). O staging directory (.iconset) e DMG sao temporarios.
+BSP.iconset/
+dmg_stage/
+BSP_rw.dmg
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs de crash gerados em runtime
+BSP_crash.log
+*.log
+
+# Ficheiros de teste e temporários
+*.tmp
+*.bak
+
+# Claude Code
+.claude/
+
+# Dados (nunca commitar dados de participantes)
+Dados/
+Raw_Data/
+dados/
+raw_data/
+test_data/
+*.xls
+*.xlsx
+
+# Exportações geradas
+*.pdf
+*.docx
+*.html
+*.png
+!BSP_banner.png
+!BSP_icon_1024.png
+!BSP_pdf_cover.png
+# Branding: tudo (assets, brand guide, scripts) E suposto entrar no repo
+!branding/**
+*.exe
+bsp_dashboard/
+cloudflare/

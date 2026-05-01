@@ -1,0 +1,15 @@
+# Normalizar line endings
+* text=auto
+
+# Scripts shell sempre LF
+*.sh text eol=lf
+
+# Batch Windows sempre CRLF
+*.bat text eol=crlf
+
+# Binários
+*.ico binary
+*.png binary
+*.exe binary
+*.dmg binary
+*.zip binary

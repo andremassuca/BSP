@@ -1,0 +1,21 @@
+# BSP - hash(es) SHA256 da palavra-passe de acesso
+#
+# Qualquer linha que nao seja comentario (#) e que seja 64 chars hex lowercase
+# e aceite como hash valido. A primeira linha sem comentario e a canonica
+# (actual). Linhas adicionais permitem um grace period para a password antiga.
+#
+# Para rodar a password:
+#   1. Gerar o novo hash:
+#        python -c "import hashlib; print(hashlib.sha256(b'NOVA_PASSWORD').hexdigest())"
+#   2. Substituir a primeira linha abaixo pelo novo hash.
+#   3. (Opcional) Manter o hash antigo numa linha adicional durante o grace.
+#   4. git commit + push para main.
+#
+# Todas as instalacoes existentes passam a aceitar o novo hash no proximo
+# arranque (com rede). Instalacoes offline continuam a aceitar o ultimo hash
+# que conseguiram obter (cache local).
+#
+# IMPORTANTE: o repo e publico - nao comitar a password em plaintext aqui.
+# Comitar apenas o SHA256. O hash nao e reversivel.
+
+76c10573cf1d0db18f6b87f4c6f7bcb393d62fc47eac43cea1aca9c5d169a0d9
