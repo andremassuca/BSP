@@ -9,7 +9,7 @@
 #   ./build_logs/01_tests.log
 #   ./build_logs/02_pip.log
 #   ./build_logs/03_icon.log
-#   ./build_logs/04_pyinstaller.log
+#   ./build_logs/04_nuitka.log
 #   ./build_logs/05_smoke.log
 #   ./build_logs/06_codesign.log
 #   ./build_logs/07_dmg.log
@@ -67,7 +67,7 @@ fi
 # ── Dependências ────────────────────────────────────────────
 hdr "[2/7]  A instalar dependências..."
 {
-    $PYTHON -m pip install pyinstaller --upgrade
+    $PYTHON -m pip install nuitka "nuitka[onefile]" --upgrade
     if [ -f "requirements.txt" ]; then
         $PYTHON -m pip install -r requirements.txt --upgrade
     else
@@ -76,25 +76,6 @@ hdr "[2/7]  A instalar dependências..."
     fi
 } >build_logs/02_pip.log 2>&1 || fail "pip falhou - ver build_logs/02_pip.log"
 ok "Dependências instaladas"
-
-# ── Opcional: PyArmor (anti-reverse-engineering) ────────────
-# Activado se a env-var BSP_OBFUSCATE=1 ou se pyarmor estiver instalado.
-# Cria build_obf/ com source ofuscado; PyInstaller usa esse em vez do .py limpo.
-SOURCE_DIR="."
-if [ "${BSP_OBFUSCATE:-0}" = "1" ] || $PYTHON -m pyarmor --version &>/dev/null; then
-    hdr "[2.5/7]  PyArmor: a ofuscar source antes de PyInstaller..."
-    rm -rf build_obf
-    if $PYTHON -m pyarmor gen --output build_obf \
-            estabilidade_gui.py bsp_core.py bsp_i18n.py >build_logs/02b_pyarmor.log 2>&1; then
-        SOURCE_DIR="build_obf"
-        ok "Source ofuscado em build_obf/"
-    else
-        warn "PyArmor falhou - continuar com source original (ver build_logs/02b_pyarmor.log)"
-    fi
-else
-    info "PyArmor nao disponivel; build sem ofuscacao adicional"
-    info "(pip install pyarmor para activar)"
-fi
 
 # ── Ícone .icns ─────────────────────────────────────────────
 hdr "[3/7]  A preparar ícone..."
@@ -123,44 +104,47 @@ else
     warn "BSP.icns e BSP_icon_1024.png ausentes - usar ícone por defeito"
 fi
 
-# ── PyInstaller ─────────────────────────────────────────────
-# --onedir em vez de --onefile - evita extracção lenta em /tmp
-# a cada execução no macOS (especialmente Apple Silicon).
-hdr "[4/7]  A compilar BSP.app com PyInstaller..."
-if ! $PYTHON -m PyInstaller \
-    --onedir \
-    --windowed \
-    --name BSP \
-    --osx-bundle-identifier com.aomassuca.bsp \
-    --log-level INFO \
-    $ICON_ARG \
-    --hidden-import numpy \
-    --hidden-import scipy \
-    --hidden-import scipy.stats \
-    --hidden-import scipy.signal \
-    --hidden-import openpyxl \
-    --hidden-import matplotlib \
-    --hidden-import matplotlib.backends.backend_tkagg \
-    --hidden-import reportlab \
-    --hidden-import reportlab.pdfgen \
-    --hidden-import reportlab.lib \
-    --hidden-import reportlab.platypus \
-    --hidden-import docx \
-    --hidden-import PIL \
-    --hidden-import tkinter \
-    --hidden-import tkinter.ttk \
-    --hidden-import tkinter.filedialog \
-    --collect-all scipy \
-    --collect-all matplotlib \
-    --collect-all reportlab \
-    estabilidade_gui.py >build_logs/04_pyinstaller.log 2>&1; then
-    warn "Ver warn-BSP.txt:"
-    [ -f "build/BSP/warn-BSP.txt" ] && tail -40 build/BSP/warn-BSP.txt
-    fail "PyInstaller falhou - ver build_logs/04_pyinstaller.log"
+# ── Nuitka — compila para código máquina nativo ─────────────
+# Nuitka gera C a partir do Python e compila para binário nativo.
+# Mais difícil de reverter que bytecode PyInstaller.
+# Primeira compilação: 20-40 min. Seguintes: muito mais rápidas (cache).
+hdr "[4/7]  A compilar BSP.app com Nuitka (codigo maquina nativo)..."
+info "Primeira compilacao demora 20-40 min - seguintes sao rapidas (cache)"
+
+# Argumento de ícone para Nuitka (usa --macos-app-icon em vez de --icon)
+NUITKA_ICON_ARG=""
+[ -f "BSP.icns" ] && NUITKA_ICON_ARG="--macos-app-icon=BSP.icns"
+
+rm -rf dist
+if ! $PYTHON -m nuitka \
+    --standalone \
+    --macos-create-app-bundle \
+    --macos-app-mode=gui \
+    --macos-app-name=BSP \
+    --macos-app-version=1.0 \
+    --output-dir=dist_nuitka \
+    --enable-plugin=tk-inter \
+    --assume-yes-for-downloads \
+    --jobs=4 \
+    --quiet \
+    $NUITKA_ICON_ARG \
+    estabilidade_gui.py >build_logs/04_nuitka.log 2>&1; then
+    fail "Nuitka falhou - ver build_logs/04_nuitka.log"
 fi
 
-[ ! -d "dist/BSP.app" ] && fail "BSP.app não foi criado - ver build_logs/04_pyinstaller.log"
-ok "BSP.app compilado"
+# Nuitka gera estabilidade_gui.app - renomear para BSP.app
+mkdir -p dist
+if [ -d "dist_nuitka/estabilidade_gui.app" ]; then
+    mv dist_nuitka/estabilidade_gui.app dist/BSP.app
+elif [ -d "dist_nuitka/BSP.app" ]; then
+    mv dist_nuitka/BSP.app dist/BSP.app
+else
+    fail "BSP.app nao encontrado em dist_nuitka/ - ver build_logs/04_nuitka.log"
+fi
+rm -rf dist_nuitka
+
+[ ! -d "dist/BSP.app" ] && fail "BSP.app nao foi criado"
+ok "BSP.app compilado com Nuitka"
 
 # ── Embeber ícone no bundle ─────────────────────────────────
 if [ -f "BSP.icns" ]; then
