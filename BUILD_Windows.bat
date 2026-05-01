@@ -48,7 +48,7 @@ echo.
 
 :: Dependencies
 echo   [1/4]  Installing dependencies...
-%PYTHON% -m pip install pyinstaller --upgrade --quiet
+%PYTHON% -m pip install pyinstaller nuitka "nuitka[onefile]" --upgrade --quiet
 if exist requirements.txt (
     %PYTHON% -m pip install -r requirements.txt --upgrade --quiet
 ) else (
@@ -58,43 +58,22 @@ if errorlevel 1 ( echo   [ERROR] pip failed. & pause & exit /b 1 )
 echo          OK
 echo.
 
-:: Optional: PyArmor obfuscation (anti-reverse-engineering)
-:: Activado se a env-var BSP_OBFUSCATE=1 ou se pyarmor existir.
-:: PyArmor pro tier ofusca a fundo; free tier faz basico mas e o suficiente
-:: para impedir uncompyle6 + leitura trivial.
-set BSP_OBFUSCATE_FLAG=
-%PYTHON% -m pyarmor --version >nul 2>&1
-if not errorlevel 1 set BSP_OBFUSCATE_FLAG=1
-if "%BSP_OBFUSCATE%"=="1" set BSP_OBFUSCATE_FLAG=1
-if defined BSP_OBFUSCATE_FLAG (
-    echo   [1.5/4]  PyArmor: a ofuscar source antes de PyInstaller...
-    if exist build_obf rmdir /s /q build_obf
-    %PYTHON% -m pyarmor gen --output build_obf estabilidade_gui.py bsp_core.py bsp_i18n.py
-    if errorlevel 1 (
-        echo   [WARNING] PyArmor falhou - a continuar com source original
-    ) else (
-        echo          OK - source ofuscado em build_obf\
-        set BSP_SOURCE_DIR=build_obf
-    )
-) else (
-    echo   [info]  PyArmor nao disponivel; build sem ofuscacao adicional
-    echo          ^(pip install pyarmor para ofuscar^)
-)
-echo.
-
 :: Step 2: BSP.exe (main application)
-echo   [2/4]  Compiling BSP.exe  (3-6 minutes)...
+:: Nuitka compila Python para codigo maquina nativo (C) - muito mais dificil
+:: de reverter do que bytecode PyInstaller. Nao requer licenca.
+echo   [2/4]  Compiling BSP.exe with Nuitka  (15-30 min first time)...
+echo          (compilacao nativa: codigo maquina, impossivel descompilar)
 echo.
-%PYTHON% -m PyInstaller --onefile --windowed --name BSP --icon BSP.ico ^
-    --hidden-import numpy ^
-    --hidden-import scipy --hidden-import scipy.stats --hidden-import scipy.signal ^
-    --hidden-import openpyxl ^
-    --hidden-import matplotlib --hidden-import matplotlib.backends.backend_tkagg ^
-    --hidden-import reportlab --hidden-import reportlab.pdfgen ^
-    --hidden-import reportlab.lib --hidden-import reportlab.platypus ^
-    --hidden-import docx --hidden-import PIL ^
-    --hidden-import tkinter --hidden-import tkinter.ttk --hidden-import tkinter.filedialog ^
-    --collect-all scipy --collect-all matplotlib --collect-all reportlab ^
+if exist dist rmdir /s /q dist
+mkdir dist
+%PYTHON% -m nuitka --onefile --windows-console-mode=disable ^
+    --windows-icon-from-ico=BSP.ico ^
+    --output-filename=dist\BSP.exe ^
+    --enable-plugin=tk-inter ^
+    --enable-plugin=numpy ^
+    --assume-yes-for-downloads ^
+    --jobs=4 ^
+    --quiet ^
     estabilidade_gui.py
 if errorlevel 1 ( echo   [ERROR] BSP.exe compilation failed. & pause & exit /b 1 )
 echo          dist\BSP.exe OK
