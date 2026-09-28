@@ -17,13 +17,10 @@
 7. [Analises Estatisticas](#7-analises-estatisticas)
 8. [Atalhos de Teclado](#8-atalhos-de-teclado)
 9. [Modo CLI (linha de comandos)](#9-modo-cli-linha-de-comandos)
-10. [Interface Web (Streamlit)](#10-interface-web-streamlit)
-11. [Modo Escuro e Claro](#11-modo-escuro-e-claro)
-12. [Auto-update](#12-auto-update)
-13. [Termos de Utilizacao e Palavra-passe](#13-termos-de-utilizacao-e-palavra-passe)
-14. [Compilar para distribuicao](#14-compilar-para-distribuicao)
-15. [Solucao de Problemas](#15-solucao-de-problemas)
-16. [Referencias](#16-referencias)
+10. [Modo Escuro e Claro](#10-modo-escuro-e-claro)
+11. [Termos de Utilizacao](#11-termos-de-utilizacao)
+12. [Solucao de Problemas](#12-solucao-de-problemas)
+13. [Referencias](#13-referencias)
 
 ---
 
@@ -33,7 +30,7 @@
 
 | Biblioteca | Obrigatoria | Funcao |
 |---|---|---|
-| Python 3.9+ | Sim | Motor principal |
+| Python 3.12+ | Sim | Motor principal (inclui tkinter) |
 | numpy | Sim | Calculo numerico |
 | scipy | Sim | Estatistica, interpolacao |
 | openpyxl | Sim | Leitura/escrita Excel |
@@ -41,36 +38,16 @@
 | reportlab | Sim | Geracao de PDF |
 | Pillow | Recomendado | Logos e banners |
 | python-docx | Opcional | Relatorio Word |
-| streamlit | Opcional | Interface web |
 
-### Instalar dependencias manualmente
+### Instalar dependencias
 
-```bash
-pip install numpy scipy openpyxl matplotlib reportlab python-docx Pillow
-```
-
-> Em sistemas Linux, adicionar `--break-system-packages` se necessario.
-
-### Windows - Instalador standalone (recomendado)
-
-1. Instala Python 3.9+ em https://www.python.org/downloads/
-   *(activa "Add Python to PATH")*
-2. Duplo-clique em `BUILD_Windows.bat`
-   -> Gera `BSP_Setup.exe` (3-6 minutos na primeira compilacao)
-3. O `BSP_Setup.exe` pode ser distribuido para qualquer maquina Windows sem Python
-
-### macOS - DMG
+A partir da pasta do BSP, com o ambiente virtual activo:
 
 ```bash
-chmod +x BUILD_macOS.sh && ./BUILD_macOS.sh
+pip install -r requirements.txt
 ```
 
--> Gera `BSP.dmg` com `BSP.app` pronto a instalar.
-
-**Primeira abertura:** Clica com botao direito em `BSP.app` -> **Abrir**
-*(necessario uma vez para ignorar o aviso de seguranca do macOS)*
-
-**Compatibilidade:** macOS 12 Monterey ou superior (Apple Silicon e Intel).
+O passo a passo completo para Windows (ambiente virtual incluido) esta no [README](README.md#instalação-passo-a-passo-windows).
 
 ---
 
@@ -82,10 +59,6 @@ Na primeira execucao, o BSP detecta automaticamente o tema do sistema operativo
 
 ### Ecra de Termos de Utilizacao
 Clica em **"Li e Aceito os Termos"** para continuar.
-
-### Ecra de Palavra-passe
-Disponivel em: **https://github.com/andremassuca**
-O ecra tem um botao **"Abrir GitHub"** para ir directamente ao link.
 
 ### Seleccao de Protocolo
 - **FMS Bipodal** - analise padrao de estabilidade, 5 ensaios por pe
@@ -132,7 +105,7 @@ Excel com tempos de inicio e fim por distancia e ensaio.
 
 ### Tarefa Funcional - Tiro (ISCPSI)
 - Analise por distancia de tiro (detectada automaticamente)
-- Multiplos intervalos temporais (pre-disparo, pos-disparo, etc.)
+- Multiplos intervalos temporais (toque a pontaria, pontaria a disparo, disparo ao fim, etc.)
 - Correlacao metricas de estabilidade vs score de precisao
 - Analise bipodal (Hurdle Step) - opcional
 
@@ -247,37 +220,13 @@ python estabilidade_gui.py --cli PASTA_INDIVIDUOS \
 
 ---
 
-## 10. Interface Web (Streamlit)
-
-```bash
-pip install streamlit
-streamlit run bsp_web.py
-# -> Abre em http://localhost:8501
-```
-
-1. Selecciona protocolo no menu lateral
-2. Faz upload da pasta em ficheiro .zip
-3. Faz upload do Excel de inicio/fim
-4. Clica **"Executar Analise"**
-5. Descarrega o ZIP de resultados
-
----
-
-## 11. Modo Escuro e Claro
+## 10. Modo Escuro e Claro
 
 Deteccao automatica na primeira execucao. Alterar manualmente em **botao configuracoes** no canto superior direito.
 
 ---
 
-## 12. Auto-update
-
-O BSP verifica novas versoes ao iniciar. Quando ha nova versao, aparece um
-banner com "Actualizar agora" (faz download + SHA256 check + lanca o
-instalador), "Ver notas" e "Dispensar".
-
----
-
-## 13. Termos de Utilizacao e Palavra-passe
+## 11. Termos de Utilizacao
 
 Termos aceites na primeira execucao - guardados em `~/.aom_estabilidade.json`.
 
@@ -289,50 +238,14 @@ del "%USERPROFILE%\.aom_estabilidade.json"
 rm ~/.aom_estabilidade.json
 ```
 
-Palavra-passe disponivel em: **https://github.com/andremassuca**
-
-### Palavra-passe rotativa (v1.0)
-
-A palavra-passe nao esta colada no binario. O hash SHA256 da password actual
-esta num ficheiro publico no repositorio (`.bsp_pass.sha256`) e cada arranque
-da app consulta esse ficheiro:
-
-- **Com rede:** a app fetcha a lista actual de hashes aceites e guarda em
-  cache local. So esses hashes funcionam.
-- **Sem rede:** usa a cache do ultimo fetch com sucesso (a app continua a
-  funcionar offline depois da primeira execucao online).
-- **Primeira execucao offline:** usa o hash embedded no binario como bootstrap.
-
-Para o autor: para mudar a password em todas as instalacoes existentes, basta
-editar `.bsp_pass.sha256` na raiz do repo (substituir o hash antigo pelo novo)
-e fazer push. No proximo arranque com rede, todas as apps passam a exigir a
-password nova. Detalhes em `docs/PASSWORD_ROTATIVA.md`.
-
 ---
 
-## 14. Compilar para distribuicao
-
-### Windows -> `BSP_Setup.exe`
-```
-BUILD_Windows.bat
-```
-Gera instalador completo para qualquer maquina Windows sem Python.
-
-### macOS -> `BSP.dmg`
-```bash
-chmod +x BUILD_macOS.sh && ./BUILD_macOS.sh
-```
-Compativel com macOS 12+ (Monterey e superior), Apple Silicon e Intel.
-
----
-
-## 15. Solucao de Problemas
+## 12. Solucao de Problemas
 
 | Problema | Solucao |
 |---|---|
-| `ModuleNotFoundError` ao arrancar | `pip install numpy scipy openpyxl matplotlib reportlab python-docx Pillow` |
+| `ModuleNotFoundError` ao arrancar | Activar o ambiente virtual e correr `pip install -r requirements.txt` |
 | Validacao falha antes de iniciar | Verificar pasta de individuos com sub-pastas |
-| Aviso de seguranca no macOS | Botao direito -> Abrir; ou Definicoes -> Privacidade |
 | PDF nao gerado | Confirmar campo PDF nao vazio e opcao activa |
 | Testes estatisticos em cinzento | Activar opcao e garantir n >= 3 individuos |
 | Relatorio HTML nao abre | Verificar ligacao a internet (Chart.js CDN) |
@@ -342,7 +255,7 @@ Compativel com macOS 12+ (Monterey e superior), Apple Silicon e Intel.
 
 ---
 
-## 16. Referencias
+## 13. Referencias
 
 - Schubert, P., & Kirchner, M. (2013). Ellipse area calculations and their applicability in posturography. *Gait & Posture*, 39(1), 518-522.
 - Winter, D.A. (1995). Human balance and posture control during standing and walking. *Gait & Posture*, 3(4), 193-214.
@@ -356,10 +269,10 @@ Compativel com macOS 12+ (Monterey e superior), Apple Silicon e Intel.
 ## Citacao Academica
 
 ```
-Massuca, A., & Massuca, L. (2026). BSP - Biomechanical Stability Program (v23).
-https://github.com/andremassuca/BSP
+Massuca, A. O., Aleixo, P., & Massuca, L. M. (2026). BSP: Biomechanical Stability Program
+(Versao 1.0) [Software]. https://github.com/andremassuca/BSP
 ```
 
 ---
 
-*BSP v23 - Andre Massuca & Luis Massuca*
+*BSP v1.0 - Andre O. Massuca, Pedro Aleixo & Luis M. Massuca*

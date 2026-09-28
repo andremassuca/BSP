@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# Dados reais e resultados: nunca publicar
+data/
+raw_data/
+out/
+output/
+outputs/
+resultados/
+individuais/
+*.xls
+*.xlsx
+*.csv
+*.sav
+*.txt
+*.pdf
+*.docx
+*.zip
+ANALISE_*.md
+
+# Dados de exemplo sinteticos: estes sim entram no repositorio
+!examples/
+!examples/**
+!requirements.txt
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

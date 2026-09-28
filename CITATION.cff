@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "Se usar este software, cite-o com os metadados abaixo. If you use this software, please cite it using the metadata below."
+type: software
+title: "BSP: Biomechanical Stability Program"
+version: "1.0"
+date-released: 2026-09-29
+repository-code: "https://github.com/andremassuca/BSP"
+license: MIT
+authors:
+  - family-names: "Massuça"
+    given-names: "André Oliveira"
+    orcid: "https://orcid.org/0009-0005-1527-843X"
+  - family-names: "Aleixo"
+    given-names: "Pedro"
+    orcid: "https://orcid.org/0000-0002-7641-5128"
+  - family-names: "Massuça"
+    given-names: "Luís Miguel"
+    orcid: "https://orcid.org/0000-0001-8786-3498"
+keywords:
+  - posturography
+  - force plate
+  - centre of pressure
+  - postural stability
+  - biomechanics
+references:
+  - type: article
+    title: "Associations of BIA-Estimated Body Composition, Handgrip Strength, and Event-Defined Postural Control with Short-Range Police Precision-Shooting Accuracy: A Cross-Sectional Study"
+    authors:
+      - family-names: "Campião"
+        given-names: "Ana"
+      - family-names: "Aleixo"
+        given-names: "Pedro"
+      - family-names: "Massuça"
+        given-names: "André Oliveira"
+      - family-names: "Abrantes"
+        given-names: "João M. S. C."
+      - family-names: "Massuça"
+        given-names: "Luís Miguel"
+    journal: "Journal of Functional Morphology and Kinesiology"
+    volume: 11
+    issue: 3
+    start: 272
+    year: 2026
+    doi: "10.3390/jfmk11030272"

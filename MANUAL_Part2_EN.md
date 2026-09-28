@@ -14,14 +14,15 @@
 |---|---|---|
 | Windows | 10 / 11 | 10 22H2, 11 23H2 |
 | macOS | 12 Monterey | Apple Silicon M1/M2/M3 and Intel |
-| Python | 3.9 | 3.9 / 3.10 / 3.11 / 3.12 |
+| Python | 3.12 | 3.12 / 3.14 |
 
 ```bash
-pip install numpy scipy openpyxl matplotlib reportlab python-docx Pillow
+pip install -r requirements.txt
+cd src
+python estabilidade_gui.py
 ```
 
-**Windows:** `BUILD_Windows.bat` -> `BSP_Setup.exe` (standalone installer)
-**macOS:** `./BUILD_macOS.sh` -> `BSP.dmg`
+Step-by-step Windows instructions (with a virtual environment) are in the [README](README.md#english).
 
 High-DPI support: Windows DPI awareness enabled automatically; macOS Retina display supported natively.
 
@@ -152,8 +153,7 @@ score correlation, full multilingual support.
 
 | Problem | Solution |
 |---|---|
-| `ModuleNotFoundError` | Install all dependencies via pip |
-| macOS Gatekeeper | Right-click -> Open (once) |
+| `ModuleNotFoundError` | Activate the virtual environment and run `pip install -r requirements.txt` |
 | PDF not generated | Ensure PDF path set and checkbox active |
 | Silent crash (v22) | Update to v23 |
 | > 10 trials | No limit - auto-adapts |
@@ -166,16 +166,16 @@ score correlation, full multilingual support.
 ## Academic Citation
 
 ```
-Massuca, A., & Massuca, L. (2026). BSP - Biomechanical Stability Program (v23).
-https://github.com/andremassuca/BSP
+Massuca, A. O., Aleixo, P., & Massuca, L. M. (2026). BSP: Biomechanical Stability Program
+(Version 1.0) [Computer software]. https://github.com/andremassuca/BSP
 ```
 
 ```bibtex
-@software{BSP_v23,
-  author  = {Massuca, Andre and Massuca, Luis},
-  title   = {BSP - Biomechanical Stability Program},
+@software{massuca_bsp_2026,
+  author  = {Massu\c{c}a, Andr\'{e} Oliveira and Aleixo, Pedro and Massu\c{c}a, Lu\'{i}s M.},
+  title   = {BSP: Biomechanical Stability Program},
   year    = {2026},
-  version = {23},
+  version = {1.0},
   url     = {https://github.com/andremassuca/BSP}
 }
 ```
@@ -190,4 +190,4 @@ https://github.com/andremassuca/BSP
 - Winter, D.A. (1995). Human balance and posture control. *Gait & Posture*, 3(4), 193-214.
 - Cohen, J. (1988). *Statistical Power Analysis* (2nd ed.). Erlbaum.
 
-*BSP v23 - Andre Massuca & Luis Massuca*
+*BSP v1.0 - Andre O. Massuca, Pedro Aleixo & Luis M. Massuca*

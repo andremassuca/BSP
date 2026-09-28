@@ -17,20 +17,17 @@
 7. [Analises Estatisticas](#7-analises-estatisticas)
 8. [Atalhos de Teclado](#8-atalhos-de-teclado)
 9. [Modo CLI](#9-modo-cli)
-10. [Interface Web](#10-interface-web)
-11. [Tema e Acessibilidade](#11-tema-e-acessibilidade)
-12. [Auto-update](#12-auto-update)
-13. [Perfis de Configuracao](#13-perfis-de-configuracao)
-14. [Analise Rapida - Ficheiro Unico](#14-analise-rapida---ficheiro-unico)
-15. [Relatorio HTML Interactivo](#15-relatorio-html-interactivo)
-16. [Validacao de Dados](#16-validacao-de-dados)
-17. [Exportacao PNG](#17-exportacao-png)
-18. [Relatorio PDF - Estrutura Completa](#18-relatorio-pdf---estrutura-completa)
-19. [Termos de Utilizacao e Palavra-passe](#19-termos-de-utilizacao-e-palavra-passe)
-20. [Compilar para Distribuicao](#20-compilar-para-distribuicao)
-21. [Solucao de Problemas](#21-solucao-de-problemas)
-22. [Historico de Versoes](#22-historico-de-versoes)
-23. [Referencias](#23-referencias)
+10. [Tema e Acessibilidade](#10-tema-e-acessibilidade)
+11. [Perfis de Configuracao](#11-perfis-de-configuracao)
+12. [Analise Rapida - Ficheiro Unico](#12-analise-rapida---ficheiro-unico)
+13. [Relatorio HTML Interactivo](#13-relatorio-html-interactivo)
+14. [Validacao de Dados (v23)](#14-validacao-de-dados-v23)
+15. [Exportacao PNG (v23)](#15-exportacao-png-v23)
+16. [Relatorio PDF - Estrutura Completa](#16-relatorio-pdf---estrutura-completa)
+17. [Termos de Utilizacao](#17-termos-de-utilizacao)
+18. [Solucao de Problemas](#18-solucao-de-problemas)
+19. [Historico de Versoes](#19-historico-de-versoes)
+20. [Referencias](#20-referencias)
 
 ---
 
@@ -42,7 +39,7 @@
 |---|---|---|
 | Windows | 10 / 11 | 10 22H2, 11 23H2 |
 | macOS | 12 Monterey | Apple Silicon M1/M2/M3 e Intel |
-| Python | 3.9 | 3.9 / 3.10 / 3.11 / 3.12 |
+| Python | 3.12 | 3.12 / 3.14 |
 
 ### Dependencias Python
 
@@ -55,28 +52,12 @@
 | reportlab | Sim | Geracao de PDF |
 | Pillow | Recomendado | Imagens e logos |
 | python-docx | Opcional | Relatorio Word |
-| streamlit | Opcional | Interface web |
 
 ```bash
-pip install numpy scipy openpyxl matplotlib reportlab python-docx Pillow
+pip install -r requirements.txt
 ```
 
-### Windows - Instalador standalone
-
-1. Instala Python 3.9+ (https://www.python.org/downloads/) - activar "Add Python to PATH"
-2. Duplo-clique em `BUILD_Windows.bat` -> gera `BSP_Setup.exe`
-3. Distribui o `BSP_Setup.exe` - instala em qualquer maquina Windows sem Python
-
-O instalador regista o programa em Adicionar/Remover Programas e cria atalho no Desktop.
-
-### macOS - DMG
-
-```bash
-chmod +x BUILD_macOS.sh && ./BUILD_macOS.sh
-```
-
-Gera `BSP.dmg` com `BSP.app`. Primeira abertura: botao direito -> Abrir.
-Desinstalar: Launchpad -> clique longo -> arrastar para o Lixo.
+O passo a passo completo para Windows (ambiente virtual incluido) esta no [README](README.md#instalação-passo-a-passo-windows).
 
 ### DPI e resolucao de ecra
 
@@ -90,8 +71,7 @@ Retina display sem configuracao adicional.
 
 1. **Tema automatico** - detecta dark/light mode do SO, aplica e guarda preferencia
 2. **Termos de Utilizacao** - aceitar uma vez; guardado em `~/.aom_estabilidade.json`
-3. **Palavra-passe** - disponivel em https://github.com/andremassuca
-4. **Seleccao de protocolo** - FMS / Unipodal / Tarefa Funcional (Tiro / Tiro com Arco)
+3. **Seleccao de protocolo** - FMS / Unipodal / Tarefa Funcional (Tiro / Tiro com Arco)
 
 A janela redimensiona automaticamente para o ecra disponivel.
 Em monitores pequenos (< 1280px), as zonas comprimem proporcionalmente.
@@ -237,7 +217,7 @@ Um `.xlsx` por individuo com:
 - **Aba ESTABILOGRAMA** - CoP X e Y ao longo do tempo
 
 ### Relatorio PDF
-Ver seccao 18 para estrutura completa.
+Ver seccao 16 para estrutura completa.
 
 ### Relatorio Word (.docx)
 Requer `python-docx`. Contem:
@@ -246,7 +226,7 @@ Requer `python-docx`. Contem:
 - Citacao academica no rodape
 
 ### Relatorio HTML
-Ver seccao 15.
+Ver seccao 13.
 
 ### Exportar CSV
 Ficheiros `.csv` prontos para R / SPSS / Excel:
@@ -254,7 +234,7 @@ Ficheiros `.csv` prontos para R / SPSS / Excel:
 - `*_individual.csv` - dados por individuo e ensaio
 
 ### Exportar PNG
-Ver seccao 17.
+Ver seccao 15.
 
 ---
 
@@ -329,26 +309,7 @@ python estabilidade_gui.py --cli PASTA_INDIVIDUOS \
 
 ---
 
-## 10. Interface Web
-
-```bash
-pip install streamlit
-streamlit run bsp_web.py
-```
-
-Abre automaticamente em **http://localhost:8501**
-
-1. Selecciona protocolo no menu lateral
-2. Upload da pasta de individuos em ficheiro .zip
-3. Upload do Excel de inicio/fim (opcional)
-4. Clica **Executar Analise**
-5. Descarrega o ZIP de resultados quando concluido
-
-Util para acesso remoto, demonstracoes e ambientes sem GUI.
-
----
-
-## 11. Tema e Acessibilidade
+## 10. Tema e Acessibilidade
 
 **Deteccao automatica:** Windows (registo `AppsUseLightTheme`), macOS (`AppleInterfaceStyle`).
 
@@ -367,21 +328,7 @@ os labels das metricas ao idioma seleccionado.
 
 ---
 
-## 12. Auto-update
-
-O BSP verifica `https://api.github.com/repos/andremassuca/BSP/releases/latest`
-ao iniciar. Se houver nova versao, aparece banner com "Actualizar agora"
-(download + verificacao SHA256 + lanca instalador), "Ver notas" e "Dispensar".
-
-Para publicar actualizacao (para maintainers):
-1. Actualizar `VERSAO = "1.0.1"` em `estabilidade_gui.py`
-2. Actualizar ficheiro `VERSION` na raiz
-3. Seguir `docs/RELEASE.md` (build em cada OS + `SHA256SUMS.txt`)
-4. `gh release create v1.0.1 ...`
-
----
-
-## 13. Perfis de Configuracao
+## 11. Perfis de Configuracao
 
 Botao **Perfis** -> guardar e carregar configuracoes completas com nome proprio.
 
@@ -400,7 +347,7 @@ Exemplos tipicos:
 
 ---
 
-## 14. Analise Rapida - Ficheiro Unico
+## 12. Analise Rapida - Ficheiro Unico
 
 **Acesso:** botao **Rapido** ou tecla **F2**
 
@@ -418,7 +365,7 @@ Util para uso clinico rapido, verificacao de dados e demonstracoes.
 
 ---
 
-## 15. Relatorio HTML Interactivo
+## 13. Relatorio HTML Interactivo
 
 Gera ficheiro `.html` standalone (sem servidor, sem instalacao).
 
@@ -432,7 +379,7 @@ Partilha por email ou servidor sem qualquer instalacao do lado do receptor.
 
 ---
 
-## 16. Validacao de Dados (v23)
+## 14. Validacao de Dados (v23)
 
 O BSP valida automaticamente a qualidade dos dados de cada individuo.
 
@@ -454,7 +401,7 @@ sao assinalados em vermelho nas tabelas Excel e no relatorio PDF.
 
 ---
 
-## 17. Exportacao PNG (v23)
+## 15. Exportacao PNG (v23)
 
 Gera imagens dos graficos individuais (estabilograma e/ou elipse 95%).
 
@@ -475,7 +422,7 @@ Os PNG sao guardados em `pasta_individuais/png/`.
 
 ---
 
-## 18. Relatorio PDF - Estrutura Completa
+## 16. Relatorio PDF - Estrutura Completa
 
 O relatorio PDF e gerado com a biblioteca ReportLab e tem estrutura fixa:
 
@@ -497,7 +444,7 @@ O relatorio PDF e gerado com a biblioteca ReportLab e tem estrutura fixa:
 
 ---
 
-## 19. Termos de Utilizacao e Palavra-passe
+## 17. Termos de Utilizacao
 
 **Termos:** aceitos na primeira execucao; guardados em `~/.aom_estabilidade.json`.
 
@@ -509,50 +456,17 @@ del "%USERPROFILE%\.aom_estabilidade.json"
 rm ~/.aom_estabilidade.json
 ```
 
-**Palavra-passe:** disponivel em https://github.com/andremassuca
-
-**Alteracao de idioma:** disponivel no ecra de password e na janela principal.
+**Alteracao de idioma:** disponivel na janela principal.
 A mudanca de idioma actualiza todos os labels da interface e dos outputs em tempo real.
 
 ---
 
-## 20. Compilar para Distribuicao
-
-### Windows -> BSP_Setup.exe
-
-```
-BUILD_Windows.bat
-```
-
-O script faz automaticamente:
-1. Instala todas as dependencias via pip
-2. Compila `BSP.exe` com PyInstaller
-3. Compila `BSP_Uninstall.exe`
-4. Empacota tudo em `BSP_Setup.exe`
-
-O instalador:
-- Instala em `%LOCALAPPDATA%\Programs\BSP\`
-- Cria atalho no Desktop
-- Regista em Adicionar/Remover Programas
-- Inclui desinstalador grafico
-
-### macOS -> BSP.dmg
-
-```bash
-chmod +x BUILD_macOS.sh && ./BUILD_macOS.sh
-```
-
-Compativel com macOS 12 Monterey+ (Intel e Apple Silicon M1/M2/M3).
-
----
-
-## 21. Solucao de Problemas
+## 18. Solucao de Problemas
 
 | Problema | Solucao |
 |---|---|
-| `ModuleNotFoundError` | `pip install numpy scipy openpyxl matplotlib reportlab python-docx Pillow` |
+| `ModuleNotFoundError` | Activar o ambiente virtual e correr `pip install -r requirements.txt` |
 | Validacao falha | Verificar pasta de individuos com sub-pastas validas |
-| Aviso de seguranca macOS | Botao direito -> Abrir (uma vez) |
 | PDF nao gerado | Campo PDF nao vazio e opcao activa |
 | Testes estatisticos em cinzento | Activar opcao e n >= 3 |
 | HTML nao abre | Verificar ligacao a internet (Chart.js CDN) |
@@ -563,7 +477,7 @@ Compativel com macOS 12 Monterey+ (Intel e Apple Silicon M1/M2/M3).
 
 ---
 
-## 22. Historico de Versoes
+## 19. Historico de Versoes
 
 ### v23 (2026)
 - Crash silencioso ao iniciar protocolo resolvido (thread de analise via after())
@@ -586,7 +500,6 @@ Compativel com macOS 12 Monterey+ (Intel e Apple Silicon M1/M2/M3).
 - Relatorio HTML interactivo Chart.js
 - Citacao academica no PDF (APA + BibTeX)
 - Cabeçalhos SPSS traduzidos por idioma
-- Banner de actualizacao automatico
 
 ### v21 (2024)
 - Protocolo de Tiro com analise de Selection CoP
@@ -597,7 +510,7 @@ Compativel com macOS 12 Monterey+ (Intel e Apple Silicon M1/M2/M3).
 
 ---
 
-## 23. Referencias
+## 20. Referencias
 
 - Schubert, P., & Kirchner, M. (2013). Ellipse area calculations and their applicability in posturography. *Gait & Posture*, 39(1), 518-522.
 - Winter, D.A. (1995). Human balance and posture control during standing and walking. *Gait & Posture*, 3(4), 193-214.
@@ -614,21 +527,21 @@ Compativel com macOS 12 Monterey+ (Intel e Apple Silicon M1/M2/M3).
 
 **Formato APA:**
 ```
-Massuca, A., & Massuca, L. (2026). BSP - Biomechanical Stability Program (v23).
-https://github.com/andremassuca/BSP
+Massuca, A. O., Aleixo, P., & Massuca, L. M. (2026). BSP: Biomechanical Stability Program
+(Versao 1.0) [Software]. https://github.com/andremassuca/BSP
 ```
 
 **Formato BibTeX:**
 ```bibtex
-@software{BSP_v23,
-  author  = {Massuca, Andre and Massuca, Luis},
-  title   = {BSP - Biomechanical Stability Program},
+@software{massuca_bsp_2026,
+  author  = {Massu\c{c}a, Andr\'{e} Oliveira and Aleixo, Pedro and Massu\c{c}a, Lu\'{i}s M.},
+  title   = {BSP: Biomechanical Stability Program},
   year    = {2026},
-  version = {23},
+  version = {1.0},
   url     = {https://github.com/andremassuca/BSP}
 }
 ```
 
 ---
 
-*BSP v23 - Andre Massuca & Luis Massuca*
+*BSP v1.0 - Andre O. Massuca, Pedro Aleixo & Luis M. Massuca*

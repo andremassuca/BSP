@@ -10,17 +10,16 @@
 
 | OS | Min version | Python |
 |---|---|---|
-| Windows | 10 / 11 | 3.9+ |
-| macOS | 12 Monterey | 3.9+ |
+| Windows | 10 / 11 | 3.12+ |
+| macOS | 12 Monterey | 3.12+ |
 
 ```bash
-pip install numpy scipy openpyxl matplotlib reportlab python-docx Pillow
+pip install -r requirements.txt
+cd src
+python estabilidade_gui.py
 ```
 
-**Windows:** Double-click `BUILD_Windows.bat` -> generates `BSP_Setup.exe`
-**macOS:** `chmod +x BUILD_macOS.sh && ./BUILD_macOS.sh` -> generates `BSP.dmg`
-
-First launch on macOS: right-click -> Open (bypass Gatekeeper once).
+Step-by-step Windows instructions (with a virtual environment) are in the [README](README.md#english).
 
 ---
 
@@ -28,8 +27,7 @@ First launch on macOS: right-click -> Open (bypass Gatekeeper once).
 
 1. **Automatic theme** - detects OS dark/light mode
 2. **End User Licence** - accept once; saved in `~/.aom_estabilidade.json`
-3. **Password** - available at https://github.com/andremassuca
-4. **Protocol selection** - FMS / Unipodal / Functional Task (Shooting / Archery)
+3. **Protocol selection** - FMS / Unipodal / Functional Task (Shooting / Archery)
 
 ---
 
@@ -120,8 +118,7 @@ Requires n >= 3 subjects.
 
 | Problem | Solution |
 |---|---|
-| `ModuleNotFoundError` | `pip install numpy scipy openpyxl matplotlib reportlab` |
-| macOS security warning | Right-click -> Open (once) |
+| `ModuleNotFoundError` | Activate the virtual environment and run `pip install -r requirements.txt` |
 | PDF not generated | Ensure PDF field not empty and option checked |
 | Silent crash (v22) | Update to v23 - fixes analysis thread crash |
 | > 10 trials | No limit - PDF auto-adapts columns and font size |
@@ -132,8 +129,8 @@ Requires n >= 3 subjects.
 ## Academic Citation
 
 ```
-Massuca, A., & Massuca, L. (2026). BSP - Biomechanical Stability Program (v23).
-https://github.com/andremassuca/BSP
+Massuca, A. O., Aleixo, P., & Massuca, L. M. (2026). BSP: Biomechanical Stability Program
+(Version 1.0) [Computer software]. https://github.com/andremassuca/BSP
 ```
 
-*BSP v23 - Andre Massuca & Luis Massuca*
+*BSP v1.0 - Andre O. Massuca, Pedro Aleixo & Luis M. Massuca*
