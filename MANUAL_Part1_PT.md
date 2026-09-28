@@ -47,7 +47,7 @@ A partir da pasta do BSP, com o ambiente virtual activo:
 pip install -r requirements.txt
 ```
 
-O passo a passo completo para Windows (ambiente virtual incluido) esta no [README](README.md#instalação-passo-a-passo-windows).
+O passo a passo completo para Windows (ambiente virtual incluido) esta no [README_PT](README_PT.md#guia-passo-a-passo-para-windows).
 
 ---
 

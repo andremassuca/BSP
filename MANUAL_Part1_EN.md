@@ -19,7 +19,7 @@ cd src
 python estabilidade_gui.py
 ```
 
-Step-by-step Windows instructions (with a virtual environment) are in the [README](README.md#english).
+Step-by-step Windows instructions (with a virtual environment) are in the [README](README.md#step-by-step-guide-for-windows).
 
 ---
 
