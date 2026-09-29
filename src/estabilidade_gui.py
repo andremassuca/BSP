@@ -1647,8 +1647,8 @@ def calcular(frames, t_ini=None, t_fim=None, peso_kg=None, altura_m=None, min_am
       peso_kg      : massa corporal em kg (opcional). Activa metricas normalizadas.
       altura_m     : altura corporal em m  (opcional). Activa normalizacao por pendulo invertido.
       min_amostras : minimo de frames na janela para calcular (default 5). Tiro
-                     com Arco usa 4 - validado contra a referencia manual dos
-                     142 atletas, onde ensaios com janela de confirmacao de
+                     com Arco usa 4 - validado contra a referencia manual (42
+                     atletas), onde ensaios com janela de confirmacao de
                      60ms (4 frames a 50Hz) foram processados com metricas
                      reais, nao descartados.
     """
@@ -2477,7 +2477,7 @@ def carregar_confirmacao_arco(caminho):
 
 
 # -----------------------------------------------------------------------
-# Referencia demografica - "Todos os registos dos 142 atletas"
+# Referencia demografica do Tiro com Arco (folha de registos, 42 atletas)
 # -----------------------------------------------------------------------
 
 # Mapeamento de codigos demograficos (confirmado pelo Pedro Aleixo):
@@ -2506,13 +2506,15 @@ def _normalizar_cabecalho(s):
 
 def carregar_atletas_ref(caminho):
     """
-    Le o ficheiro "Todos os registos dos 142 atletas em JUl_2024 _.xlsx"
-    com referencias demograficas e scores.
+    Le a folha de referencia demografica do Tiro com Arco (registos de
+    Julho de 2024, 42 atletas com IDs 101-142), com demografia e scores.
 
     Estrutura esperada:
       Linha 1 = cabecalho (PESO, ALTURA, IDADE, ESTILO, CATEGORIA, GENERO,
                            P1..P30, P_TOTAL, d1..d30, [colunas manuais ignoradas])
-      Linhas 2+ = dados, uma linha por atleta (142 linhas).
+      Linhas 2+ = dados, uma linha por atleta. As linhas sem ID inteiro ou
+                   sem antropometria nem pontuacoes (ex.: a legenda de
+                   codigos no fim da folha) sao ignoradas.
 
     Ignoramos explicitamente as colunas 68-308 (0-indexed: 67-307) que
     contem valores manuais irrelevantes.
@@ -2599,7 +2601,10 @@ def carregar_atletas_ref(caminho):
                     aid = str(int(float(row[0])))
                 except (TypeError, ValueError):
                     aid = str(row[0]).strip()
-        if not aid:
+        # So IDs inteiros: o emparelhamento com as pastas usa o prefixo
+        # numerico, e as linhas de legenda no fim da folha ("ESTILO", ...)
+        # nao sao atletas.
+        if not aid or not aid.isdigit():
             continue
 
         peso     = _num(_col(row, 'PESO', 'PESOKG', 'WEIGHT'))
@@ -2639,6 +2644,13 @@ def carregar_atletas_ref(caminho):
             if vals_p:
                 p_total = sum(vals_p)
 
+        # Linhas de legenda com ID numerico (ex.: "1 = recurvo", "2 = composto")
+        # nao tem antropometria nem pontuacoes: um atleta tem de ter pelo
+        # menos um destes dados.
+        if (peso is None and altura is None and p_total is None
+                and all(v is None for v in P) and all(v is None for v in dist)):
+            continue
+
         atletas.append({
             'id':        aid,
             'peso_kg':   peso,
@@ -2661,7 +2673,7 @@ def atletas_ref_por_id(lista_ref):
 
 
 # -----------------------------------------------------------------------
-# Analises demograficas (v1.0) - Tiro com Arco + 142 atletas
+# Analises demograficas (v1.0) - Tiro com Arco + referencia demografica
 # -----------------------------------------------------------------------
 #
 # Quatro funcoes de analise descritiva/inferencial que ligam as metricas de
@@ -2869,7 +2881,7 @@ def percentis_subgrupo(ath, atletas, chave, fatores=('categoria', 'genero')):
 
     Parametros:
       ath     : dict do atleta de interesse
-      atletas : lista onde procurar pares (tipicamente os 142)
+      atletas : lista onde procurar pares (tipicamente os atletas analisados)
       chave   : metrica (ex: 'ea95', 'P_total')
       fatores : tuplo de chaves demograficas para filtrar
 
@@ -3032,7 +3044,7 @@ def processar_atleta(pasta, ifd, usar_embed, log=print, protocolo=None,
     """
     Parametros novos (v1.0):
       tempos_arco  : resultado de carregar_confirmacao_arco() para PROTO_ARCO
-      atleta_ref   : dict da referência dos 142 atletas (peso, altura, estilo, ...)
+      atleta_ref   : dict da referência demográfica (peso, altura, estilo, ...)
     """
     if protocolo is None: protocolo = _PROTOCOLO_ACTIVO
     proto = PROTOCOLOS[protocolo]
@@ -3526,7 +3538,7 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
     if tempos_arco and not janelas:
         log(f"  aviso: '{nome}' (ID={ind_id}) sem janelas de confirmacao", 'aviso')
 
-    # Peso/altura a partir da referencia dos 142 atletas (se disponivel)
+    # Peso/altura a partir da referencia demografica (se disponivel)
     peso_kg  = None
     altura_m = None
     if atleta_ref:
@@ -3589,7 +3601,7 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
             m = None
 
             # Tiro com Arco usa min_amostras=4 em vez do default (5): validado
-            # contra a referencia manual dos 142 atletas, que processou 8
+            # contra a referencia manual (42 atletas), que processou 8
             # ensaios (janela de confirmacao = 60ms = 4 frames a 50Hz) com
             # metricas reais em vez de os descartar. Ver investigacao no
             # historico do projecto (atletas 111/115/134).
@@ -3655,7 +3667,7 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
         'scores':    None,
         'mets':      mets,
         'raw':       raw,
-        # Demografia do atleta (se disponivel dos 142 atletas)
+        # Demografia do atleta (se disponivel na referencia demografica)
         'ref':       atleta_ref,
         'peso_kg':   peso_kg,
         'altura_m':  altura_m,
@@ -6235,7 +6247,7 @@ def _pagina_novidades_pdf(c, W, H):
              'Tabelas individuais adaptam-se automaticamente a qualquer número de '
              'ensaios; colunas comprimem e fonte reduz para manter a legibilidade.'),
             ('Relatório de grupo Tiro com Arco',
-             'Análise comparativa de 142 atletas com testes estatísticos (Mann-Whitney, '
+             'Análise comparativa dos atletas com testes estatísticos (Mann-Whitney, '
              'Kruskal-Wallis, correlações Pearson/Spearman) e gráficos de distribuição.'),
             ('Exportação multi-formato',
              'PDF clínico, Excel com gráficos, PNG (DPI configurável) e relatório '
@@ -11067,7 +11079,7 @@ class Janela:
         else:
             self._ent(le, T('fich_tempos'), 'ifd', fich=True,
                       ext=[('Excel','*.xlsx *.xls')], _cfg=cfg.get('ifd',''), key='fich_tempos')
-            # Tiro com Arco - ficheiro de referencia demografica (142 atletas)
+            # Tiro com Arco - ficheiro de referencia demografica
             if self._proto_key == PROTO_ARCO:
                 self._ent(le, T('fich_atletas_ref'), 'atletas_ref_file', fich=True,
                           ext=[('Excel','*.xlsx *.xls')],
@@ -11380,7 +11392,7 @@ class Janela:
         Tooltip(cb_peso, 'Activa calculos que requerem a massa corporal.\n'
                          'Requer ficheiro de tempos com coluna "peso_kg" ou introducao manual.')
         # Campo de peso unico (para analises sem ficheiro de tempos / sem ref demografica).
-        # Quando o utilizador carrega o ficheiro de referencia demografica (142 atletas)
+        # Quando o utilizador carrega o ficheiro de referencia demografica
         # no protocolo Tiro com Arco, o peso vem por atleta a partir desse ficheiro -
         # entao desactivamos a entrada e mostramos uma label clarificadora.
         f_peso2 = tk.Frame(le, bg=CF); f_peso2.pack(fill='x', padx=(18,0), pady=(2,4))
@@ -11706,7 +11718,7 @@ class Janela:
             pass
 
     def _atualizar_estado_peso_padrao(self, *args):
-        # Quando o ficheiro de referência (142 atletas) está carregado, o peso
+        # Quando o ficheiro de referência demográfica está carregado, o peso
         # vem por atleta de lá -> desactiva o campo manual e mostra a label.
         ent     = getattr(self, '_ent_peso',        None)
         lbl_ref = getattr(self, '_lbl_peso_ref',    None)
@@ -12501,7 +12513,7 @@ class Janela:
             ind = os.path.join(saida_dir, 'individuais')
         os.makedirs(ind, exist_ok=True)
 
-        # Ficheiro de referencia demografica (142 atletas) - so PROTO_ARCO
+        # Ficheiro de referencia demografica - so PROTO_ARCO
         atletas_ref_file = ''
         if self._proto_key == PROTO_ARCO:
             _v_ref = getattr(self, 'v_atletas_ref_file', None)
@@ -13896,7 +13908,7 @@ def _run_testes_sinteticos(verbose=True):
 
         # Ensaio 4: janela de confirmacao de 60ms (4 frames a 20ms/frame) -
         # replica o caso real encontrado nos atletas 111/115/134 da referencia
-        # dos 142 atletas, onde o professor calculou metricas reais com
+        # manual (42 atletas), onde o professor calculou metricas reais com
         # exactamente 4 amostras. Deve calcular normalmente (nao ficar None),
         # com min_amostras=4 especifico do protocolo Arco.
         _fp4 = _os.path.join(_pasta_101,
@@ -13999,7 +14011,7 @@ def _run_testes_sinteticos(verbose=True):
            f"m={_mets_i[2] is not None} fonte={_raw_i[2].get('fonte') if _raw_i[2] else None}",
            "Arco-Integracao")
         _t("Integração arco: ensaio 4 (janela de 60ms = 4 frames, caso real "
-           "validado contra a referencia dos 142 atletas) calcula normalmente, "
+           "validado contra a referencia manual) calcula normalmente, "
            "nao fica None",
            _mets_i[3] is not None and _raw_i[3].get("fonte") == "janela_confirmacao",
            f"m={_mets_i[3] is not None} fonte={_raw_i[3].get('fonte') if _raw_i[3] else None}",
@@ -14176,14 +14188,14 @@ def _run_testes_sinteticos(verbose=True):
                False, str(ex)[:150], "Tiro-IP")
 
     # ════════════════════════════════════════════════════════════════════
-    # SECÇÃO 10: Referência demográfica (142 atletas) - v1.0
+    # SECÇÃO 10: Referência demográfica - v1.0
     # ════════════════════════════════════════════════════════════════════
-    if verbose: print("\n  [10] Referência demográfica (142 atletas)")
+    if verbose: print("\n  [10] Referência demográfica")
 
     try:
         from openpyxl import Workbook as _Wb
         with tempfile.TemporaryDirectory() as tmpdir:
-            _ref_path = _os.path.join(tmpdir, "ref_142.xlsx")
+            _ref_path = _os.path.join(tmpdir, "ref_demografica.xlsx")
             _wb_ref = _Wb()
             _ws = _wb_ref.active
             # Cabeçalho: ID, PESO, ALTURA, IDADE, ESTILO, CATEGORIA, GENERO,
@@ -14247,6 +14259,27 @@ def _run_testes_sinteticos(verbose=True):
             _t("atletas_ref_por_id cria dict indexado",
                _by_id.get('101', {}).get('peso_kg') == 70.5,
                f"n={len(_by_id)}", "Demografia")
+
+            # Folha com a estrutura da referencia real: coluna de ID sem
+            # cabecalho e um bloco de legenda de codigos no fim, que nao
+            # pode entrar como atletas.
+            _ref_leg = _os.path.join(tmpdir, "ref_legenda.xlsx")
+            _wb_leg = _Wb()
+            _wl = _wb_leg.active
+            _wl.append([None, 'PESO', 'ALTURA', 'IDADE', 'ESTILO', 'CATEGORIA',
+                        'GENERO', 'P1', 'P2'])
+            _wl.append([101, 70.5, 1.75, 23, 1, 'senior', 1, 10, 9])
+            _wl.append([102, 62.0, 1.65, 21, 2, 'junior', 2, 8, 7])
+            _wl.append([None] * 9)
+            _wl.append(['ESTILO', None, None, None, 'CATEGORIA', None, 'GENERO'])
+            _wl.append([1, None, None, 1, 'recurvo', 'junior', 'M'])
+            _wl.append([2, None, None, 2, 'composto', 'cadetes', 'F'])
+            _wl.append([None, None, None, None, 'nota', None, 'nota'])
+            _wb_leg.save(_ref_leg)
+            _ref_l = carregar_atletas_ref(_ref_leg)
+            _t("carregar_atletas_ref ignora a legenda no fim da folha",
+               [a['id'] for a in _ref_l] == ['101', '102'],
+               f"ids={[a['id'] for a in _ref_l]}", "Demografia")
     except Exception as ex:
         _t("carregar_atletas_ref sem excepção", False, str(ex)[:120], "Demografia")
 

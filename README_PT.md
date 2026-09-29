@@ -283,7 +283,7 @@ Os ficheiros em `examples/` servem de modelo. Para os regenerar: `python example
 
 Se usar o BSP num trabalho, cite o software (ver [CITATION.cff](CITATION.cff); o GitHub mostra o botão **Cite this repository**):
 
-Massuça, A. O., Aleixo, P., & Massuça, L. M. (2026). *BSP: Biomechanical Stability Program* (Versão 1.0.1) [Software]. https://github.com/andremassuca/BSP
+Massuça, A. O., Aleixo, P., & Massuça, L. M. (2026). *BSP: Biomechanical Stability Program* (Versão 1.0.2) [Software]. https://github.com/andremassuca/BSP
 
 Estudo que usou o BSP: Campião, A., Aleixo, P., Massuça, A. O., Abrantes, J. M. S. C., & Massuça, L. M. (2026). Associations of BIA-Estimated Body Composition, Handgrip Strength, and Event-Defined Postural Control with Short-Range Police Precision-Shooting Accuracy: A Cross-Sectional Study. *Journal of Functional Morphology and Kinesiology*, 11(3), 272. https://doi.org/10.3390/jfmk11030272
 

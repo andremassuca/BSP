@@ -2,6 +2,14 @@
 
 All notable changes to BSP are recorded in this file. [Versão em português abaixo](#histórico-de-alterações).
 
+## [1.0.2] - 2026-09-29
+
+### Fixed
+- Archery demographic reference: the reader now accepts only rows with an integer athlete ID and at least one anthropometric or score value. The code legend at the end of the reference sheet (rows "ESTILO", "1" and "2") was being loaded as three extra athletes, which inflated the reference count and could attach legend codes to subject folders numbered 1 or 2. New test in `estabilidade_gui.py --testes`.
+
+### Changed
+- The interface label "Demographic reference (142 athletes)" is now "Demographic reference" in all four languages. The reference sheet has 42 athletes (IDs 101 to 142); 142 was the highest ID, not the number of athletes. Code comments and docstrings corrected accordingly.
+
 ## [1.0.1] - 2026-09-29
 
 ### Added
@@ -42,6 +50,14 @@ First public release of the source code.
 # Histórico de alterações
 
 Todas as alterações relevantes ao BSP ficam registadas neste ficheiro.
+
+## [1.0.2] - 2026-09-29
+
+### Corrigido
+- Referência demográfica do Tiro com Arco: o leitor passa a aceitar só linhas com ID de atleta inteiro e com pelo menos um valor antropométrico ou de pontuação. A legenda de códigos no fim da folha de referência (linhas "ESTILO", "1" e "2") estava a ser carregada como três atletas a mais, o que inflacionava a contagem da referência e podia associar códigos da legenda a pastas de indivíduos numeradas 1 ou 2. Novo teste em `estabilidade_gui.py --testes`.
+
+### Alterado
+- A etiqueta da interface "Referência demográfica (142 atletas)" passa a "Referência demográfica" nas quatro línguas. A folha de referência tem 42 atletas (IDs 101 a 142); 142 era o ID mais alto, não o número de atletas. Comentários e docstrings do código corrigidos em conformidade.
 
 ## [1.0.1] - 2026-09-29
 
