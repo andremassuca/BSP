@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below. Se usar este software, cite-o com os metadados abaixo."
 type: software
 title: "BSP: Biomechanical Stability Program"
-version: "1.0.2"
-date-released: 2026-09-29
+version: "1.0.0"
+date-released: 2026-09-30
 repository-code: "https://github.com/andremassuca/BSP"
 license: MIT
 authors:

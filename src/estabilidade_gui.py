@@ -3034,6 +3034,37 @@ def correlacao_score(atletas, chave_cop, chave_outcome='P_total'):
 # Processar atleta (geral + tiro)
 # -----------------------------------------------------------------------
 
+def _janela_truncada(frames, b, e):
+    """
+    Verifica se a janela declarada [b, e] ultrapassa o registo da plataforma
+    (mais de um intervalo de amostragem antes do primeiro frame ou depois do
+    ultimo). Nesse caso calcular() usa so a parte que existe, e o ensaio tem
+    de ser assinalado em vez de aparecer como 'ok'.
+
+    Devolve {'declarada_ms', 'usada_ms', 't0_ms', 't1_ms'} ou None.
+    """
+    if b is None or e is None or not frames or len(frames) < 2:
+        return None
+    t0 = frames[0]['t_ms']
+    t1 = frames[-1]['t_ms']
+    dt = abs(frames[1]['t_ms'] - frames[0]['t_ms'])
+    if b >= t0 - dt and e <= t1 + dt:
+        return None
+    dentro = [fr['t_ms'] for fr in frames if b <= fr['t_ms'] <= e]
+    usada = (dentro[-1] - dentro[0]) if len(dentro) > 1 else 0
+    return {'declarada_ms': e - b, 'usada_ms': usada, 't0_ms': t0, 't1_ms': t1}
+
+
+def _texto_truncada(tr):
+    return (f"janela declarada {tr['declarada_ms']:.0f} ms, usada {tr['usada_ms']:.0f} ms "
+            f"(registo da plataforma t={tr['t0_ms']:.0f}-{tr['t1_ms']:.0f} ms)")
+
+
+def _aviso_ensaio(avisos, ensaio, tipo, detalhe):
+    """Regista um aviso por ensaio (separador AVISOS do Excel e pagina de avisos do PDF)."""
+    avisos.append({'ensaio': ensaio, 'tipo': tipo, 'detalhe': detalhe})
+
+
 # Funcao que processa os dados de um individuo
 # Le os ficheiros .xls e calcula as metricas de estabilidade
 def processar_atleta(pasta, ifd, usar_embed, log=print, protocolo=None,
@@ -3078,16 +3109,19 @@ def processar_atleta(pasta, ifd, usar_embed, log=print, protocolo=None,
 
     mets = {lado: [] for lado, _, _ in proto['lados']}
     raw  = {lado: [] for lado, _, _ in proto['lados']}
+    avisos = []
 
     for lado, pref, offset in proto['lados']:
         for t in range(1, n_ens + 1):
             num = t + offset
+            # Sem ficheiro com o numero do ensaio, o ensaio fica em falta. A
+            # antiga procura so pelo prefixo devolvia o primeiro ficheiro do
+            # lado, ou seja, os dados de outro ensaio.
             fp  = achar_ficheiro(pasta, lado, t)
-            if fp is None:
-                fp = achar_ficheiro(pasta, pref)  # fallback antigo
             if fp is None or os.path.getsize(fp) == 0:
                 msg = 'nao encontrado' if fp is None else 'ficheiro vazio'
                 log(f"  aviso {msg}: {pref}{t}", 'aviso')
+                _aviso_ensaio(avisos, f'{pref}{t}', 'sem ficheiro', f'ficheiro do ensaio {msg}')
                 mets[lado].append(None); raw[lado].append(None); continue
             try:
                 dados = ler_ficheiro(fp)
@@ -3137,9 +3171,15 @@ def processar_atleta(pasta, ifd, usar_embed, log=print, protocolo=None,
                             f"(ficheiro t={t0f:.0f}-{t1f:.0f}ms, janela={b}-{e}ms). "
                             f"Usado ficheiro completo.", 'aviso')
 
+                _tr = _janela_truncada(frs, used_b, used_e) if m else None
                 mets[lado].append(m)
-                raw[lado].append({'dados': dados, 'ini': used_b, 'fim': used_e})
-                if m:
+                raw[lado].append({'dados': dados, 'ini': used_b, 'fim': used_e,
+                                  'truncada': _tr})
+                if m and _tr:
+                    log(f"  aviso {pref}{t}: janela truncada, {_texto_truncada(_tr)}"
+                        f"  ea95={m['ea95']:.1f}mm2", 'aviso')
+                    _aviso_ensaio(avisos, f'{pref}{t}', 'janela truncada', _texto_truncada(_tr))
+                elif m:
                     itv = f"{used_b}-{used_e}ms" if used_b is not None else "completo"
                     log(f"  ok {pref}{t} [{itv}] [{_fonte}]"
                         f"  ea95={m['ea95']:.1f}mm2  a={m['leng_a']:.1f}  b={m['leng_b']:.1f}mm", 'ok')
@@ -3164,7 +3204,7 @@ def processar_atleta(pasta, ifd, usar_embed, log=print, protocolo=None,
             log(msg, 'aviso')
 
     return {'nome': nome, 'id': ind_id, 'mets': mets, 'raw': raw,
-            'protocolo': protocolo, 'scores': None}
+            'protocolo': protocolo, 'scores': None, 'avisos': avisos}
 
 
 def _processar_atleta_tiro(pasta, tempos_tiro, usar_embed, n_ens, log,
@@ -3218,6 +3258,7 @@ def _processar_atleta_tiro(pasta, tempos_tiro, usar_embed, n_ens, log,
     # ----------------------------------------------------------------
     # Estrutura: tiro_dist[dist][intervalo] = [m_trial1, m_trial2, ...]
     tiro_dist = {}
+    avisos = []
 
     dists_process = dists if dists else ([distancia] if distancia else [])
     for dist in dists_process:
@@ -3255,6 +3296,8 @@ def _processar_atleta_tiro(pasta, tempos_tiro, usar_embed, n_ens, log,
             if fp is None:
                 fp = achar_ficheiro(pasta, 'tiro', t)
             if fp is None:
+                _aviso_ensaio(avisos, f'{dist} t{t}', 'sem ficheiro',
+                              'ficheiro do ensaio nao encontrado')
                 for itv in intervalos:
                     dist_result[itv].append(None)
                     dist_raw[itv].append(None)
@@ -3268,10 +3311,16 @@ def _processar_atleta_tiro(pasta, tempos_tiro, usar_embed, n_ens, log,
                 for itv in intervalos:
                     b, e = _tiro_janela(itv, trial_t, dados, t_fim_ficheiro, usar_embed)
                     m = calcular(dados['frames'], b, e)
+                    _tr = _janela_truncada(dados['frames'], b, e) if m else None
                     dist_result[itv].append(m)
                     dist_raw[itv].append({'dados': dados, 'ini': b, 'fim': e,
-                                          'dist': dist, 'trial': t})
-                    if m:
+                                          'dist': dist, 'trial': t, 'truncada': _tr})
+                    if m and _tr:
+                        log(f"  aviso {dist} t{t} [{_tiro_itv_label(itv)}]: janela truncada, "
+                            f"{_texto_truncada(_tr)}  ea95={m['ea95']:.1f}mm2", 'aviso')
+                        _aviso_ensaio(avisos, f'{dist} t{t} [{_tiro_itv_label(itv)}]',
+                                      'janela truncada', _texto_truncada(_tr))
+                    elif m:
                         itv_label = f"{b}-{e}ms" if b else "completo"
                         log(f"  ok {dist} t{t} [{_tiro_itv_label(itv)}] [{itv_label}]  ea95={m['ea95']:.1f}mm2", 'ok')
                     else:
@@ -3426,10 +3475,17 @@ def _processar_atleta_tiro(pasta, tempos_tiro, usar_embed, n_ens, log,
                                 f"(ficheiro t={t0:.0f}-{t1:.0f}ms, janela={b}-{e}ms). "
                                 f"Usado ficheiro completo.", 'aviso')
 
+                    _tr = _janela_truncada(frs, used_b, used_e) if m else None
                     mets_hs[lado].append(m)
-                    raw_hs[lado].append({'dados': dados, 'ini': used_b, 'fim': used_e})
+                    raw_hs[lado].append({'dados': dados, 'ini': used_b, 'fim': used_e,
+                                         'truncada': _tr})
 
-                    if m:
+                    if m and _tr:
+                        log(f"  aviso hs_{lado}_{num_f}: janela truncada, {_texto_truncada(_tr)}"
+                            f"  ea95={m['ea95']:.1f}mm2", 'aviso')
+                        _aviso_ensaio(avisos, f'hs_{lado}_{num_f}', 'janela truncada',
+                                      _texto_truncada(_tr))
+                    elif m:
                         janela_str = (f"{used_b}-{used_e}ms" if used_b is not None
                                       else "completo")
                         log(f"  ok hs_{lado}_{num_f} [{janela_str}] [{_fonte}]"
@@ -3490,6 +3546,7 @@ def _processar_atleta_tiro(pasta, tempos_tiro, usar_embed, n_ens, log,
         'raw':  raw_hs,
         # Right/Left Selection CoP por distancia (v17)
         'sel_dist': sel_dist,
+        'avisos': avisos,
     }
 
 
@@ -3549,6 +3606,7 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
 
     mets = {'arco': []}
     raw  = {'arco': []}
+    avisos = []
 
     for t in range(1, n_ens + 1):
         fp = achar_ficheiro_arco(pasta, ind_id or '', t)
@@ -3556,6 +3614,13 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
             # Fallback: qualquer .xls no pasta com "_{t}" no inicio
             fp = achar_ficheiro(pasta, 'arco', t)
         if fp is None or os.path.getsize(fp) == 0:
+            # Um ensaio declarado no ficheiro de confirmacao (ou qualquer ensaio,
+            # sem ficheiro de confirmacao) sem ficheiro da plataforma tem de
+            # ficar registado; ensaios alem dos declarados nao sao avisados.
+            if not janelas or t in janelas:
+                _msg = 'nao encontrado' if fp is None else 'vazio'
+                log(f"  aviso arco_{t}: ficheiro do ensaio {_msg}", 'aviso')
+                _aviso_ensaio(avisos, f'arco_{t}', 'sem ficheiro', f'ficheiro do ensaio {_msg}')
             mets['arco'].append(None)
             raw['arco'].append(None)
             continue
@@ -3637,11 +3702,17 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
                     f"(< {_MIN_AMOSTRAS_ARCO} minimo; ficheiro t={_t0}-{_t1}ms, "
                     f"{len(frs)} frames totais); descartado (nao cai em ficheiro completo).", 'aviso')
 
+            _tr = _janela_truncada(frs, b, e) if (m and _fonte != 'completo') else None
             mets['arco'].append(m)
             raw['arco'].append({'dados': dados, 'ini': b, 'fim': e,
-                                'fonte': _fonte, 'ficheiro': os.path.basename(fp)})
+                                'fonte': _fonte, 'ficheiro': os.path.basename(fp),
+                                'truncada': _tr})
 
-            if m:
+            if m and _tr:
+                log(f"  aviso arco_{t} [{_fonte}]: janela truncada, {_texto_truncada(_tr)}"
+                    f"  ea95={m['ea95']:.1f}mm2", 'aviso')
+                _aviso_ensaio(avisos, f'arco_{t}', 'janela truncada', _texto_truncada(_tr))
+            elif m:
                 log(f"  ok arco_{t} [{_fonte}]  ea95={m['ea95']:.1f}mm2  "
                     f"vel={m['vel_med']:.1f}mm/s  stiff_x={m.get('stiff_x') or 0:.3f}", 'ok')
             else:
@@ -3671,6 +3742,7 @@ def _processar_atleta_arco(pasta, tempos_arco, n_ens, log,
         'ref':       atleta_ref,
         'peso_kg':   peso_kg,
         'altura_m':  altura_m,
+        'avisos':    avisos,
     }
 
 
@@ -6581,6 +6653,13 @@ def gerar_pdf(atletas, caminho, log=print, opts_estats=None):
             log('  ok pagina ESTATS', 'ok')
         except Exception as ex:
             log(f'  aviso: pagina ESTATS nao gerada ({ex})', 'aviso')
+
+    # ---- Avisos por ensaio (sem ficheiro, janela truncada) ----
+    try:
+        if _pagina_avisos_pdf(c, atletas, W, H):
+            log('  ok pagina avisos', 'ok')
+    except Exception as _ex_av:
+        log(f'  aviso: pagina de avisos nao gerada ({_ex_av})', 'aviso')
 
     # ---- Página de citação académica ----
     try:
@@ -9562,6 +9641,66 @@ def exportar_csv_estats(atletas, caminho_base, protocolo=None, sep=';', decimal=
     return criados
 
 
+def _linhas_avisos(atletas):
+    """(ID, individuo, ensaio, aviso, detalhe) de todos os avisos por ensaio."""
+    linhas = []
+    for a in atletas:
+        for av in a.get('avisos') or []:
+            linhas.append((a.get('id') or '', a.get('nome') or '', av['ensaio'],
+                           av['tipo'], av['detalhe']))
+    return linhas
+
+
+def _aba_avisos(wb, atletas):
+    """Separador AVISOS: ensaios sem ficheiro e janelas truncadas."""
+    linhas = _linhas_avisos(atletas)
+    if not linhas:
+        return
+    ws = wb.create_sheet('AVISOS')
+    for j, cab in enumerate(('ID', 'Individuo', 'Ensaio', 'Aviso', 'Detalhe'), start=1):
+        cl(ws, 1, j, cab, fn=FCAB, fi=FAZ, al=ALC, bo=BN)
+    for i, lin in enumerate(linhas, start=2):
+        for j, v in enumerate(lin, start=1):
+            cl(ws, i, j, v)
+    for letra, larg in zip('ABCDE', (8, 26, 24, 18, 80)):
+        ws.column_dimensions[letra].width = larg
+
+
+def _pagina_avisos_pdf(c, atletas, W, H):
+    """Pagina(s) de avisos por ensaio. Devolve False se nao houver avisos."""
+    linhas = _linhas_avisos(atletas)
+    if not linhas:
+        return False
+    from reportlab.lib.units import cm
+
+    def _cabecalho():
+        c.setFillColorRGB(0.06, 0.10, 0.14)
+        c.rect(0, 0, W, H, fill=1, stroke=0)
+        c.setFillColorRGB(0.0, 0.706, 0.847)
+        c.setFont('Helvetica-Bold', 13)
+        c.drawString(1.2*cm, H - 1.4*cm, 'AVISOS DE PROCESSAMENTO')
+        c.setFillColorRGB(0.74, 0.84, 0.93)
+        c.setFont('Helvetica', 8)
+        c.drawString(1.2*cm, H - 1.9*cm,
+                     'Ensaios sem ficheiro e janelas que ultrapassam o registo da plataforma')
+        return H - 2.8*cm
+
+    y = _cabecalho()
+    for aid, nome, ens, tipo, det in linhas:
+        if y < 2*cm:
+            c.showPage()
+            y = _cabecalho()
+        c.setFillColorRGB(0.93, 0.96, 1.0)
+        c.setFont('Helvetica-Bold', 8)
+        c.drawString(1.2*cm, y, f'{aid} {nome}  |  {ens}  |  {tipo}')
+        c.setFillColorRGB(0.74, 0.84, 0.93)
+        c.setFont('Helvetica', 7.5)
+        c.drawString(1.6*cm, y - 10, det[:140])
+        y -= 24
+    c.showPage()
+    return True
+
+
 # Guarda os resultados de todos os individuos num ficheiro Excel
 # Cria multiplas abas: DADOS, GRUPO, SPSS
 def guardar_resumo(atletas, caminho, protocolo=None, opts_estats=None):
@@ -9703,6 +9842,7 @@ def guardar_resumo(atletas, caminho, protocolo=None, opts_estats=None):
     # Tiro com Arco - abas demograficas quando ha ref. demografica
     if protocolo == PROTO_ARCO and _tem_demografia(atletas):
         _abas_demografia(wb, atletas)
+    _aba_avisos(wb, atletas)
     cred(ws,len(atletas)+6)
     wb.save(caminho)
 
@@ -12848,7 +12988,8 @@ class Janela:
                         if not self._run: break
                         try:
                             n_png_ok += _exportar_png_individuo(
-                                ath, png_dir, dpi=_dpi_png, tipos=_tipos_png)
+                                ath, png_dir, dpi=_dpi_png, tipos=_tipos_png,
+                                log=self._log)
                         except Exception as _ex_png:
                             self._log(f'  aviso PNG {ath["nome"]}: {_ex_png}', 'aviso')
                     if n_png_ok:
@@ -12909,12 +13050,15 @@ class Janela:
         threading.Thread(target=_t, daemon=True).start()
 
 
-def _exportar_png_individuo(ath, pasta_saida, dpi=180, tipos=None):
+def _exportar_png_individuo(ath, pasta_saida, dpi=180, tipos=None, log=None):
     """
     Exporta PNGs do estabilograma e elipse 95% para cada ensaio de um atleta.
     Devolve o numero de ficheiros PNG criados com sucesso.
     Requer matplotlib (ja importado no modulo como _MPL_OK).
+    Cada falha fica no log com a causa; um individuo sem nenhum PNG tambem.
     """
+    if log is None:
+        log = lambda *a, **k: None
     if not _MPL_OK:
         return 0
     if tipos is None:
@@ -12941,8 +13085,8 @@ def _exportar_png_individuo(ath, pasta_saida, dpi=180, tipos=None):
                     with open(fn, 'wb') as fh:
                         fh.write(png_estab)
                     n_ok += 1
-              except Exception:
-                pass
+              except Exception as _ex:
+                log(f'  aviso PNG {nome_ens} estabilograma: {type(_ex).__name__}: {_ex}', 'aviso')
 
             # ── Elipse 95% ────────────────────────────────────────────
             if 'elipse' in tipos:
@@ -12953,9 +13097,16 @@ def _exportar_png_individuo(ath, pasta_saida, dpi=180, tipos=None):
                     with open(fn, 'wb') as fh:
                         fh.write(png_ell)
                     n_ok += 1
-              except Exception:
-                pass
+              except Exception as _ex:
+                log(f'  aviso PNG {nome_ens} elipse: {type(_ex).__name__}: {_ex}', 'aviso')
 
+    if n_ok == 0:
+        if _is_tiro_like(proto_key):
+            _motivo = ('no protocolo de tiro so os ensaios do Hurdle Step sao exportados '
+                       'em PNG, e nenhum tem metricas')
+        else:
+            _motivo = 'nenhum ensaio com metricas'
+        log(f"  aviso PNG {ath.get('nome', '?')}: nenhum PNG gerado ({_motivo})", 'aviso')
     return n_ok
 
 
@@ -14028,6 +14179,143 @@ def _run_testes_sinteticos(verbose=True):
            _mets_i[5] is not None and _raw_i[5].get("fonte") == "embed_ou_completo",
            f"m={_mets_i[5] is not None} fonte={_raw_i[5].get('fonte') if _raw_i[5] else None}",
            "Arco-Integracao")
+
+        # ── Avisos por ensaio: ficheiro em falta e janela alem do registo ──
+        # Ensaio 2 declarado sem ficheiro; ensaio 3 com confirmacao_2 depois
+        # do fim do registo. Registo de 0 a 9980 ms.
+        _pasta_102 = _os.path.join(_tmp_arco_int, "102_Atleta Avisos")
+        _os.makedirs(_pasta_102, exist_ok=True)
+        _escrever_stability_arco(_os.path.join(
+            _pasta_102, "102_1 - 01-01-2026 - Stability export.xls"), 2000.0, 6000.0)
+        _escrever_stability_arco(_os.path.join(
+            _pasta_102, "102_3 - 01-01-2026 - Stability export.xls"), 2000.0, 12000.0)
+        _tempos_av = {'por_id': {'102': {
+            1: {'toque': 100, 'conf_1': 2000, 'conf_2': 6000},
+            2: {'toque': 100, 'conf_1': 2000, 'conf_2': 6000},
+            3: {'toque': 100, 'conf_1': 2000, 'conf_2': 12000}}},
+            'n_trials_max': 3, 'ids': ['102']}
+        _log_av = []
+        try:
+            _r_av = _processar_atleta_arco(_pasta_102, _tempos_av, n_ens=3,
+                                           log=lambda msg, *a, **k: _log_av.append(msg))
+            _av = {x['ensaio']: x for x in _r_av.get('avisos', [])}
+            _tr3 = (_r_av['raw']['arco'][2] or {}).get('truncada') or {}
+            _t("Avisos arco: ensaio declarado sem ficheiro fica no log e nos avisos",
+               'arco_2' in _av and _av['arco_2']['tipo'] == 'sem ficheiro'
+               and any('arco_2' in l for l in _log_av),
+               f"avisos={sorted(_av)}", "Avisos")
+            _t("Avisos arco: janela alem do fim do registo marcada como truncada "
+               "(declarada 10000 ms, usada 7980 ms) e sem 'ok' no log",
+               _tr3.get('declarada_ms') == 10000 and _tr3.get('usada_ms') == 7980
+               and 'arco_3' in _av and _av['arco_3']['tipo'] == 'janela truncada'
+               and not any(l.strip().startswith('ok arco_3') for l in _log_av),
+               f"truncada={_tr3}", "Avisos")
+            _t("Avisos arco: janela dentro do registo nao gera aviso",
+               'arco_1' not in _av
+               and (_r_av['raw']['arco'][0] or {}).get('truncada') is None,
+               f"avisos={sorted(_av)}", "Avisos")
+
+            # Excel: separador AVISOS com uma linha por aviso
+            _xls_av = _os.path.join(_tmp_arco_int, "avisos.xlsx")
+            guardar_resumo([_r_av], _xls_av, protocolo=PROTO_ARCO)
+            from openpyxl import load_workbook as _lwb_av
+            _wb_av = _lwb_av(_xls_av)
+            _linhas_xl = ([[cel.value for cel in r] for r in _wb_av['AVISOS'].iter_rows(min_row=2)]
+                          if 'AVISOS' in _wb_av.sheetnames else [])
+            _t("Avisos: Excel de resultados tem o separador AVISOS com os 2 ensaios",
+               sorted((r[2], r[3]) for r in _linhas_xl)
+               == [('arco_2', 'sem ficheiro'), ('arco_3', 'janela truncada')],
+               f"linhas={[(r[2], r[3]) for r in _linhas_xl]}", "Avisos")
+
+            # PDF: pagina de avisos
+            _log_pdf = []
+            gerar_pdf([_r_av], _os.path.join(_tmp_arco_int, "avisos.pdf"),
+                      log=lambda msg, *a, **k: _log_pdf.append(msg))
+            _t("Avisos: relatorio PDF inclui a pagina de avisos",
+               any('pagina avisos' in l for l in _log_pdf),
+               f"log={[l for l in _log_pdf if 'aviso' in l][:3]}", "Avisos")
+        except Exception as ex:
+            _t("Avisos arco sem excepção", False, f"{type(ex).__name__}: {ex}"[:150], "Avisos")
+
+        # ── Protocolo generico (FMS): mesmos dois casos ──
+        _pasta_201 = _os.path.join(_tmp_arco_int, "201_Teste Janela")
+        _os.makedirs(_pasta_201, exist_ok=True)
+        _escrever_stability_arco(_os.path.join(_pasta_201, "dir_1.xls"), 2000.0, 12000.0)
+        _log_fms = []
+        try:
+            _r_fms = processar_atleta(_pasta_201, {'Teste Janela': {1: (2000, 12000), 2: (1000, 3000)}},
+                                      False, log=lambda msg, *a, **k: _log_fms.append(msg),
+                                      protocolo=PROTO_FMS, n_ens_override=2)
+            _av_f = _r_fms.get('avisos', [])
+            _tr_f = (_r_fms['raw']['dir'][0] or {}).get('truncada') or {}
+            _t("Avisos FMS: janela alem do registo marcada como truncada",
+               _tr_f.get('declarada_ms') == 10000 and _tr_f.get('usada_ms') == 7980
+               and any(a['tipo'] == 'janela truncada' and 'dir' in a['ensaio'] for a in _av_f),
+               f"truncada={_tr_f} avisos={[(a['ensaio'], a['tipo']) for a in _av_f]}", "Avisos")
+            _t("Avisos FMS: ensaio sem ficheiro fica nos avisos (alem do log)",
+               any(a['tipo'] == 'sem ficheiro' and a['ensaio'].startswith('esq') for a in _av_f),
+               f"avisos={[(a['ensaio'], a['tipo']) for a in _av_f]}", "Avisos")
+            _t("Avisos FMS: ensaio sem ficheiro fica em falta (sem metricas), sem usar "
+               "o ficheiro de outro ensaio do mesmo lado",
+               _r_fms['mets']['dir'][1] is None and _r_fms['raw']['dir'][1] is None
+               and any(a['tipo'] == 'sem ficheiro' and 'dir' in a['ensaio'] and a['ensaio'].endswith('2')
+                       for a in _av_f),
+               f"m_dir2={_r_fms['mets']['dir'][1] is not None} "
+               f"avisos={[(a['ensaio'], a['tipo']) for a in _av_f]}", "Avisos")
+        except Exception as ex:
+            _t("Avisos FMS sem excepção", False, f"{type(ex).__name__}: {ex}"[:150], "Avisos")
+
+        # ── Protocolo de tiro: mesmos dois casos ──
+        _pasta_301 = _os.path.join(_tmp_arco_int, "301_Tiro Teste")
+        _os.makedirs(_pasta_301, exist_ok=True)
+        _escrever_stability_arco(_os.path.join(
+            _pasta_301, "trial5_1 - 01_01_2026 - Stability_export.xls"), 2000.0, 12000.0)
+        _tempos_tiro_av = {'por_individuo': {301: {'5m': {1: {'toque': 2000, 'pontaria': 4000,
+                                                              'disparo': 12000}}}},
+                           'distancias': ['5m'], 'hurdle_step': {}}
+        try:
+            _r_tiro = _processar_atleta_tiro(_pasta_301, _tempos_tiro_av, False, 2,
+                                             lambda *a, **k: None, intervalos=['toque_disparo'],
+                                             incluir_hs=False, protocolo=PROTO_TIRO)
+            _av_t = _r_tiro.get('avisos', [])
+            _t("Avisos tiro: janela toque-disparo alem do registo marcada como truncada",
+               any(a['tipo'] == 'janela truncada' and a['ensaio'].startswith('5m t1') for a in _av_t),
+               f"avisos={[(a['ensaio'], a['tipo']) for a in _av_t]}", "Avisos")
+            _t("Avisos tiro: ensaio sem ficheiro fica nos avisos (alem do log)",
+               any(a['tipo'] == 'sem ficheiro' and a['ensaio'] == '5m t2' for a in _av_t),
+               f"avisos={[(a['ensaio'], a['tipo']) for a in _av_t]}", "Avisos")
+        except Exception as ex:
+            _t("Avisos tiro sem excepção", False, f"{type(ex).__name__}: {ex}"[:150], "Avisos")
+
+        # ── Exportacao PNG: falhas e individuos sem PNG ficam no log ──
+        _log_png = []
+        _orig_estab = globals()['_png_estabilograma']
+
+        def _estab_falha(*a, **k):
+            raise RuntimeError('falha simulada')
+        try:
+            globals()['_png_estabilograma'] = _estab_falha
+            _ath_png = {'nome': 'PNG Teste', 'protocolo': PROTO_ARCO,
+                        'mets': {'arco': [_mets_i[0]]}, 'raw': {'arco': [_raw_i[0]]}}
+            _pasta_png = _os.path.join(_tmp_arco_int, "png")
+            _os.makedirs(_pasta_png, exist_ok=True)
+            _exportar_png_individuo(_ath_png, _pasta_png, dpi=40, tipos=['estabilograma'],
+                                    log=lambda msg, *a, **k: _log_png.append(msg))
+            _t("PNG: falha ao gerar o estabilograma fica no log com a causa",
+               any('falha simulada' in l for l in _log_png),
+               f"log={_log_png[:2]}", "Avisos")
+            _log_png.clear()
+            _exportar_png_individuo({'nome': 'Tiro Sem HS', 'protocolo': PROTO_TIRO,
+                                     'mets': {'dir': [], 'esq': []}, 'raw': {}},
+                                    _pasta_png, dpi=40,
+                                    log=lambda msg, *a, **k: _log_png.append(msg))
+            _t("PNG: individuo de tiro sem PNG gera aviso a explicar a causa",
+               any('nenhum PNG gerado' in l and 'Hurdle Step' in l for l in _log_png),
+               f"log={_log_png[:2]}", "Avisos")
+        except Exception as ex:
+            _t("PNG avisos sem excepção", False, f"{type(ex).__name__}: {ex}"[:150], "Avisos")
+        finally:
+            globals()['_png_estabilograma'] = _orig_estab
 
     # ════════════════════════════════════════════════════════════════════
     # SECÇÃO 9b: Tiro ISCPSI - janelas, Índice de Perturbação, Posição vs Disparo

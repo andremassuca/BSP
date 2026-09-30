@@ -61,6 +61,8 @@ Available protocols:
 - About 500 MB of free disk space for the virtual environment.
 - An internet connection during installation.
 
+BSP runs entirely on your computer and does not send any data to any server. The only exceptions are the optional HTML report, which loads the Chart.js library from cdn.jsdelivr.net when you open it in a browser, and error reports, which are sent only if you choose to, through your own email program.
+
 ## Installation
 
 ### Quick start
@@ -283,7 +285,7 @@ Use the files in `examples/` as templates. To regenerate them: `python examples/
 
 If you use BSP in your work, please cite the software (see [CITATION.cff](CITATION.cff); GitHub shows a **Cite this repository** button):
 
-Massuça, A. O., Aleixo, P., & Massuça, L. M. (2026). *BSP: Biomechanical Stability Program* (Version 1.0.2) [Computer software]. https://github.com/andremassuca/BSP
+Massuça, A. O., Aleixo, P., & Massuça, L. M. (2026). *BSP: Biomechanical Stability Program* (Version 1.0.0) [Computer software]. https://github.com/andremassuca/BSP
 
 Study that used BSP: Campião, A., Aleixo, P., Massuça, A. O., Abrantes, J. M. S. C., & Massuça, L. M. (2026). Associations of BIA-Estimated Body Composition, Handgrip Strength, and Event-Defined Postural Control with Short-Range Police Precision-Shooting Accuracy: A Cross-Sectional Study. *Journal of Functional Morphology and Kinesiology*, 11(3), 272. https://doi.org/10.3390/jfmk11030272
 
